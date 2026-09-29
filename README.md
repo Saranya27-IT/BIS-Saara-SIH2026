@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# BIS Saara
 
-# Run and deploy your AI Studio app
+AI-powered Intelligent Assistant for Indian Standards and BIS Services.
 
-This contains everything you need to run your app locally.
+## Smart India Hackathon 2026
 
-View your app in AI Studio: https://ai.studio/apps/30187342-1e24-4bed-8b53-ffeb8de4c5cd
+**PS ID:** SIH26107
 
-## Run Locally
+**Organization:** Ministry of Consumer Affairs, Food & Public Distribution
 
-**Prerequisites:**  Node.js
+## Features
 
+- AI BIS Assistant
+- Standards Search
+- ISI Verification
+- Certification Guide
+- PDF Summarizer
+- Analytics Dashboard
+- English, Hindi & Tamil Support
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Tech Stack
+
+- React
+- Tailwind CSS
+- Recharts
+- Google AI Studio
+
+## Team
+
+Smart India Hackathon 2026
