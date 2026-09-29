@@ -1,0 +1,6 @@
+{
+  "name": "BIS Saara – Intelligent BIS Assistant",
+  "description": "AI-powered Intelligent Assistant for Indian Standards, ISI Verification, and Certification Services for Industries and Consumers (SIH26107).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
