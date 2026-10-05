@@ -124,6 +124,7 @@ export const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ setActiveTab, la
     textEn: string; 
     textHi: string; 
     textTa: string; 
+    isFallback?: boolean;
     relatedIS?: string; 
     action?: { label: string; tab: ActiveTab };
     recommendations?: { isNumber: string; title: string; reason: string; similarity: string }[];
@@ -183,6 +184,7 @@ export const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ setActiveTab, la
       textEn: `Thank you for your question regarding Indian Standards and BIS compliance. Under the BIS Act 2016, products affecting consumer safety, health, and national infrastructure are regulated under Scheme-I (ISI Mark) or Scheme-II (CRS). You can browse our Standards Directory or verify existing CML licenses on the tabs above. Would you like to check specific testing requirements or download application forms for your industry?`,
       textHi: `भारतीय मानक और BIS अनुपालन से संबंधित आपके प्रश्न के लिए धन्यवाद। BIS अधिनियम 2016 के तहत जन-सुरक्षा, स्वास्थ्य और राष्ट्रीय बुनियादी ढांचे से जुड़े उत्पाद योजना-I (ISI मार्क) अथवा योजना-II (CRS) के अंतर्गत विनियमित हैं। आप ऊपर दिए गए टैब से संबंधित मानक विवरण या CML लाइसेंस की प्रामाणिकता जांच सकते हैं।`,
       textTa: `இந்திய தரநிலைகள் மற்றும் BIS இணக்கம் குறித்த உங்கள் கேள்விக்கு நன்றி. BIS சட்டம் 2016 இன் கீழ், நுகர்வோர் பாதுகாப்பு மற்றும் சுகாதாரத்தை பாதிக்கும் பொருட்கள் திட்டம்-I (ISI முத்திரை) அல்லது திட்டம்-II (CRS) இன் கீழ் கட்டுப்படுத்தப்படுகின்றன. மேலே உள்ள தாவல்களில் நீங்கள் தரநிலைகள் மற்றும் உரிமங்களைச் சரிபார்க்கலாம்.`,
+      isFallback: true,
       action: { label: 'Explore Standards Catalog', tab: 'standards' },
       recommendations: [
         { isNumber: 'IS 10500:2012', title: 'Drinking Water Specification', reason: 'Universal baseline consumer safety standard', similarity: 'Popular' },
@@ -191,40 +193,104 @@ export const AIAssistantTab: React.FC<AIAssistantTabProps> = ({ setActiveTab, la
     };
   };
 
-  const handleSend = (textToSend?: string) => {
-    const query = textToSend || input;
-    if (!query.trim()) return;
+  const handleSend = async (textToSend?: string) => {
+  const query = textToSend || input;
+  if (!query.trim()) return;
 
-    const userMsg: Message = {
-      id: `usr-${Date.now()}`,
-      sender: 'user',
-      textEn: query,
-      textHi: query,
-      textTa: query,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+  const userMsg: Message = {
+    id: `usr-${Date.now()}`,
+    sender: 'user',
+    textEn: query,
+    textHi: query,
+    textTa: query,
+    timestamp: new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  };
 
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setIsTyping(true);
+  setMessages(prev => [...prev, userMsg]);
+  setInput('');
+  setIsTyping(true);
 
-    setTimeout(() => {
-      const match = findBestResponse(query);
+  try {
+    const match = findBestResponse(query);
+
+    if (!match.isFallback) {
       const assistantMsg: Message = {
         id: `asst-${Date.now()}`,
         sender: 'assistant',
         textEn: match.textEn,
         textHi: match.textHi,
         textTa: match.textTa,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
         relatedIS: match.relatedIS,
         suggestedAction: match.action,
         recommendations: match.recommendations
       };
+
       setMessages(prev => [...prev, assistantMsg]);
       setIsTyping(false);
-    }, 600);
-  };
+      return;
+    }
+
+    // No local BIS answer found → ask Gemini
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query,
+        language: lang
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'AI response failed');
+    }
+
+    const aiAnswer = data.answer;
+
+    const assistantMsg: Message = {
+      id: `asst-${Date.now()}`,
+      sender: 'assistant',
+      textEn: aiAnswer,
+      textHi: aiAnswer,
+      textTa: aiAnswer,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+
+    setMessages(prev => [...prev, assistantMsg]);
+
+  } catch (error) {
+    console.error('AI Assistant Error:', error);
+
+    const errorMsg: Message = {
+      id: `asst-${Date.now()}`,
+      sender: 'assistant',
+      textEn: 'Sorry, I am unable to connect to the BIS Saara AI service right now. Please try again.',
+      textHi: 'क्षमा करें, BIS Saara AI सेवा से अभी कनेक्ट नहीं हो पा रहा है। कृपया पुनः प्रयास करें।',
+      textTa: 'மன்னிக்கவும், BIS Saara AI சேவையுடன் தற்போது இணைக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+
+    setMessages(prev => [...prev, errorMsg]);
+  } finally {
+    setIsTyping(false);
+  }
+};
 
   // Voice Query Simulation
   const handleStartVoice = () => {
