@@ -51,14 +51,39 @@ Your answer must:
 - Give a practical answer in simple language.
 - Do not claim that you accessed private BIS databases.
 `;
+let response;
+let lastError;
 
-    const response = await ai.models.generateContent({
+for (let attempt = 0; attempt < 3; attempt++) {
+  try {
+    response = await ai.models.generateContent({
       model: "gemini-3.8-flash",
       contents: prompt
     });
 
-    const answer = response.text || "Sorry, I could not generate an answer.";
+    break;
+  } catch (error: any) {
+    lastError = error;
 
+    const status = error?.status;
+
+    if (status !== 503 && status !== 429) {
+      throw error;
+    }
+
+    if (attempt < 2) {
+      const delay = 1000 * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
+if (!response) {
+  throw lastError || new Error("Gemini service unavailable");
+}
+
+const answer =
+  response.text || "Sorry, I could not generate an answer.";
     return res.status(200).json({
       answer
     });
